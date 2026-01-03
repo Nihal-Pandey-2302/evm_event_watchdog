@@ -4,6 +4,7 @@
 
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+[![Website](https://img.shields.io/badge/website-live-orange.svg)](https://nihal-pandey-2302.github.io/evm_event_watchdog/)
 
 ```text
 A production-grade security monitor that watches Ethereum, Polygon,
