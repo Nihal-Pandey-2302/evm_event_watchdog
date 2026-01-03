@@ -1477,6 +1477,7 @@ dependencies = [
  "dotenv",
  "eyre",
  "futures-util",
+ "rand 0.9.2",
  "ratatui",
  "reqwest",
  "serde",

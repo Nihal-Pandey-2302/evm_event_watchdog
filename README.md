@@ -1,25 +1,29 @@
 # EVM Event Watchdog 🛡️
 
-**A high-performance, real-time security monitor for EVM blockchains.**
-
-The **EVM Event Watchdog** detects critical on-chain anomalies—such as large transfers, ownership changes, and infinite approvals—and visualizes them in a professional-grade Terminal UI (TUI).
+### **Detect rug pulls and exploits before they drain millions.**
 
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-![TUI Demo](tui.gif)
+```text
+A production-grade security monitor that watches Ethereum, Polygon,
+and Arbitrum for suspicious activity in real-time. Built with Rust
+for maximum performance.
 
----
+✅ Live Telegram/Discord alerts
+✅ Sub-second detection latency
+✅ Professional TUI with filtering
+✅ Currently monitoring mainnet (see live alerts)
 
-## 🎯 Why This Matters
+Perfect for DeFi protocols, wallet providers, and security teams.
+```
 
-On-chain security incidents often escalate within minutes. Large transfers, ownership changes, or infinite approvals can indicate:
+## 📱 Live Alerts & Dashboard
 
-- Compromised keys
-- Rug pulls or admin abuse
-- Exploit preparation or active draining
-
-EVM Event Watchdog provides immediate, low-latency visibility into such events, enabling faster human or automated response before irreversible damage occurs.
+|           Real-Time TUI           |           Live Telegram Alerts           |
+| :-------------------------------: | :--------------------------------------: |
+|       ![TUI Demo](tui.gif)        | ![Telegram Bot](telegram_screenshot.png) |
+| _Zero-latency terminal dashboard_ |  _Instant notifications on your phone_   |
 
 ---
 
@@ -38,9 +42,15 @@ It is not an exploit detector, but a real-time signal generator intended to comp
 ## ✨ Features
 
 - **Real-Time Detection Engine**:
+
   - **Threshold Rules**: "Transfer > 10,000 USDT"
   - **State Changes**: "Ownership Transferred"
   - **Security Audits**: "Infinite Approval (> 50% uint256)"
+
+- **Enterprise-Grade Expansion (Hackathon Update)**:
+  - **Multi-Chain Support**: Simultaneous monitoring of Ethereum, Polygon, Arbitrum.
+  - **Rich Alerts**: Discord Webhooks with color-coded severity & rich embeds.
+  - **Simulation Mode**: `--simulate` flag for Chaos Engineering & Demos.
 - **Production-Ready TUI**:
 
   - **Zero-Latency Dashboard**: Backed by thread-safe atomic state.
@@ -60,6 +70,9 @@ It is not an exploit detector, but a real-time signal generator intended to comp
 
 - **Rust/Cargo**: [Install Here](https://rustup.rs/)
 - **Ethereum Node**: WebSocket URL (Infura, Alchemy, or Local).
+- **(Optional) Alerts**:
+  - **Discord**: Webhook URL.
+  - **Telegram**: Bot Token + Chat ID.
 
 ### 2. Configuration
 
@@ -67,13 +80,23 @@ Create a `.env` file in the root directory:
 
 ```bash
 RPC_URL=wss://mainnet.infura.io/ws/v3/YOUR_API_KEY
+DISCORD_WEBHOOK_URL=https://...
+TELEGRAM_BOT_TOKEN=123:ABC...
+TELEGRAM_CHAT_ID=12345
 ```
+
+> **Security Note**: We recommend setting secrets in `.env`. The `config.toml` file is for public, structure-based configuration.
 
 Verify `config.toml` (default provided):
 
 ```toml
 [chains.ethereum]
 rpc_url = "env:RPC_URL"
+
+[alerts]
+webhook_url = "env:DISCORD_WEBHOOK_URL" # Set via DISCORD_WEBHOOK_URL in .env
+telegram_bot_token = "env:TELEGRAM_BOT_TOKEN" # Set via TELEGRAM_BOT_TOKEN
+telegram_chat_id = "env:TELEGRAM_CHAT_ID" # Set via TELEGRAM_CHAT_ID
 
 [[contracts]]
 name = "USDT"
@@ -139,9 +162,14 @@ Decisions such as using a TUI, in-memory state, and aggressive deduplication wer
 
 The watchdog is designed to run alongside nodes and infrastructure services, not as a user-facing dashboard.
 
+## 🕹️ Controls (Interactive Mode)
+
+- **Selection Menu**: Run `cargo run` (without arguments) to pick a specific chain or "Monitor All".
+- **Runtime Filtering**: Press `Tab` inside the TUI to cycle views: `[Filter: ALL] -> [Filter: Ethereum] -> [Filter: Polygon]`.
+- **Exit**: Press `q` to quit.
+
 ## 🔮 Future Work (Out of Scope)
 
-- **Multi-Chain Support**: Polygon, Arbitrum.
 - **Persistence**: Database integration.
 - **Automated Response**: Pausing contracts via multisig.
 

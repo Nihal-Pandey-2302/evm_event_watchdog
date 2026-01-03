@@ -37,7 +37,9 @@ pub struct RulesConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct AlertsConfig {
-    pub webhook_url: String,
+    pub webhook_url: String, // Discord
+    pub telegram_bot_token: Option<String>,
+    pub telegram_chat_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

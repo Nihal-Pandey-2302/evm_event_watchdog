@@ -23,14 +23,14 @@ pub async fn connect(rpc_url: &str) -> Result<WsProvider> {
 
 use crate::state::AppState;
 
-pub async fn watch_blocks(provider: Arc<WsProvider>, state: Arc<AppState>) -> Result<()> {
+pub async fn watch_blocks(provider: Arc<WsProvider>, state: Arc<AppState>, chain_name: String) -> Result<()> {
     let sub = provider.subscribe_blocks().await?;
     let mut stream = sub.into_stream();
 
     while let Some(block) = stream.next().await {
         let number = block.header.number.unwrap_or_default();
-        state.update_block(number);
-        info!("New Block: {:?}", number);
+        state.update_block(&chain_name, number);
+        info!("[{}] New Block: {:?}", chain_name, number);
     }
 
     Ok(())
@@ -39,6 +39,8 @@ pub async fn watch_blocks(provider: Arc<WsProvider>, state: Arc<AppState>) -> Re
 pub async fn watch_logs(
     provider: Arc<WsProvider>,
     address: Address,
+    chain_id: u64,
+    chain_name: String,
     tx: Sender<NormalizedEvent>,
 ) -> Result<()> {
     let filter = Filter::new()
@@ -56,7 +58,8 @@ pub async fn watch_logs(
                   if let Ok(decoded) = OwnershipTransferred::decode_log(&log.inner, true) {
                       info!("Detected OwnershipTransferred: {:?}", decoded);
                       let event = NormalizedEvent {
-                          chain_id: 1, // TODO: parameterized
+                          chain_id,
+                          chain_name: chain_name.clone(),
                           contract_address: log.address(),
                           tx_hash: log.transaction_hash.unwrap_or_default(),
                           block_number: log.block_number.unwrap_or_default(),
@@ -72,7 +75,8 @@ pub async fn watch_logs(
                   if let Ok(decoded) = Transfer::decode_log(&log.inner, true) {
                       info!("Detected Transfer: {:?}", decoded);
                       let event = NormalizedEvent {
-                          chain_id: 1, 
+                          chain_id,
+                          chain_name: chain_name.clone(),
                           contract_address: log.address(),
                           tx_hash: log.transaction_hash.unwrap_or_default(),
                           block_number: log.block_number.unwrap_or_default(),
@@ -87,7 +91,8 @@ pub async fn watch_logs(
               } else if sig == Approval::SIGNATURE_HASH {
                   if let Ok(decoded) = Approval::decode_log(&log.inner, true) {
                       let event = NormalizedEvent {
-                          chain_id: 1,
+                          chain_id,
+                          chain_name: chain_name.clone(),
                           contract_address: log.address(),
                           tx_hash: log.transaction_hash.unwrap_or_default(),
                           block_number: log.block_number.unwrap_or_default(),

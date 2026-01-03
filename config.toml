@@ -1,5 +1,6 @@
 [chains]
 ethereum = { rpc_url = "wss://eth-mainnet.g.alchemy.com/v2/your-api-key", chain_id = 1 }
+polygon = { rpc_url = "wss://polygon-bor-rpc.publicnode.com", chain_id = 137 } # Public Endpoint Example
 
 [[contracts]]
 name = "USDT"
@@ -17,4 +18,6 @@ enabled = true
 severity = "High"
 
 [alerts]
-webhook_url = "" # Set via env var usually, or here
+webhook_url = "" # Set via DISCORD_WEBHOOK_URL in .env
+telegram_bot_token = "" # Set via TELEGRAM_BOT_TOKEN in .env
+telegram_chat_id = ""   # Set via TELEGRAM_CHAT_ID in .env 

@@ -32,6 +32,7 @@ pub enum Severity {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NormalizedEvent {
     pub chain_id: u64,
+    pub chain_name: String,
     pub contract_address: Address,
     pub tx_hash: B256,
     pub block_number: u64,

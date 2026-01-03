@@ -45,31 +45,60 @@ fn run_app<B: ratatui::backend::Backend>(
 ) -> std::io::Result<()> {
     let start_time = Instant::now();
     
+    let mut current_filter_index = 0; // 0 = All
+
     loop {
         terminal.draw(|f| {
+            // ... (Layout remains same) ...
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(1)
                 .constraints(
                     [
                         Constraint::Length(3), // Header
-                        Constraint::Length(10), // Summary & Health
-                        Constraint::Min(10),   // Recent Alerts Table
+                        Constraint::Length(10), // Report
+                        Constraint::Min(10),   // Table
                     ]
                     .as_ref(),
                 )
                 .split(f.size());
 
+            // --- Chain Filtering Logic ---
+            let mut active_chains: Vec<String> = vec!["ALL".to_string()];
+            if let Ok(heights) = state.chain_heights.lock() {
+                let mut chains: Vec<String> = heights.keys().cloned().collect();
+                chains.sort();
+                active_chains.extend(chains);
+            }
+            // Ensure index is valid
+            if current_filter_index >= active_chains.len() {
+                current_filter_index = 0;
+            }
+            let selected_filter = &active_chains[current_filter_index];
+
+
             // --- Header ---
-            let block_num = state.last_block.load(std::sync::atomic::Ordering::Relaxed);
+            let block_info = if let Ok(heights) = state.chain_heights.lock() {
+                if heights.is_empty() {
+                    "No Chains Active".to_string()
+                } else {
+                    heights.iter()
+                        .map(|(k, v)| format!("{}: #{}", k, v))
+                        .collect::<Vec<String>>()
+                        .join(" | ")
+                }
+            } else {
+                "State Locked".to_string()
+            };
+
             let uptime = start_time.elapsed().as_secs();
             
             let header_layout = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(33), Constraint::Percentage(33), Constraint::Percentage(33)])
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(25), Constraint::Percentage(25)])
                 .split(chunks[0]);
 
-            let block_widget = Paragraph::new(format!("BLOCK: #{}", block_num))
+            let block_widget = Paragraph::new(format!("BLOCKS: {}", block_info))
                 .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
                 .block(Block::default().borders(Borders::ALL));
             
@@ -77,9 +106,11 @@ fn run_app<B: ratatui::backend::Backend>(
                  .style(Style::default().fg(Color::White))
                  .block(Block::default().borders(Borders::ALL));
 
-            let status_widget = Paragraph::new("STATUS: CONNECTED")
-                 .style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
-                 .block(Block::default().borders(Borders::ALL));
+            // Status now shows Filter
+            let filter_text = format!("FILTER: [{}] (Tab)", selected_filter);
+            let status_widget = Paragraph::new(filter_text)
+                 .style(Style::default().fg(if selected_filter == "ALL" { Color::Green } else { Color::Yellow }).add_modifier(Modifier::BOLD))
+                 .block(Block::default().title(" Status ").borders(Borders::ALL));
 
             f.render_widget(block_widget, header_layout[0]);
             f.render_widget(uptime_widget, header_layout[1]);
@@ -144,15 +175,17 @@ fn run_app<B: ratatui::backend::Backend>(
 
             // --- Footer (Recent Alerts Table) ---
             let history = state.alert_history.lock().unwrap();
-            let headers = Row::new(vec!["SEVERITY", "TIME AGO", "MESSAGE"])
+            // Upgraded headers to include Chain
+            let headers = Row::new(vec!["CHAIN", "SEVERITY", "TIME AGO", "MESSAGE"])
                 .style(Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow))
                 .bottom_margin(1);
             
             let rows: Vec<Row> = history.iter()
                 .rev()
-                .filter(|(sev, _, _, _)| *sev != Severity::Low) // Filter Low severity
+                .filter(|(sev, _, _, _, _)| *sev != Severity::Low) // Filter Low severity
+                .filter(|(_, chain, _, _, _)| selected_filter == "ALL" || chain == selected_filter) // CHAIN FILTER
                 .take(15) // Strict Cap
-                .map(|(sev, msg, time, count)| {
+                .map(|(sev, chain, msg, time, count)| {
                     let age = time.elapsed().as_secs();
                     let color = match sev {
                         Severity::Critical => Color::Red,
@@ -172,6 +205,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
 
                     Row::new(vec![
+                        Cell::from(chain.clone()).style(Style::default().fg(Color::Cyan)),
                         Cell::from(format!("{:?}", sev)).style(Style::default().fg(color).add_modifier(Modifier::BOLD)),
                         Cell::from(format!("{}s", age)).style(Style::default().fg(Color::DarkGray)),
                         Cell::from(display_msg),
@@ -179,9 +213,10 @@ fn run_app<B: ratatui::backend::Backend>(
                 }).collect();
             
             let table = Table::new(rows, [
+                Constraint::Length(10), // Chain
                 Constraint::Length(12), // Severity
                 Constraint::Length(10), // Time
-                Constraint::Fill(1),    // Message (Fills remaining space, but truncated input prevents overflow)
+                Constraint::Fill(1),    // Message
             ])
             .header(headers)
             .block(Block::default().title(" Recent Alerts ").borders(Borders::ALL))
@@ -193,8 +228,12 @@ fn run_app<B: ratatui::backend::Backend>(
 
         if event::poll(Duration::from_millis(200))? {
             if let Event::Key(key) = event::read()? {
-                if key.code == KeyCode::Char('q') {
-                    return Ok(());
+                match key.code {
+                    KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Tab => {
+                        current_filter_index += 1; // Cycle
+                    }
+                    _ => {}
                 }
             }
         }
